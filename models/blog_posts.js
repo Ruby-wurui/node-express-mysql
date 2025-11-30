@@ -48,8 +48,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     published_at: {
       type: DataTypes.DATE,
-      allowNull: false,
-      defaultValue: DataTypes.NOW
+      allowNull: true
     },
     tags: {
       type: DataTypes.JSON,
