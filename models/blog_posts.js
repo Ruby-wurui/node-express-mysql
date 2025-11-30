@@ -102,30 +102,30 @@ module.exports = (sequelize, DataTypes) => {
   });
 
   // Instance methods
-  BlogPost.prototype.incrementViewCount = function() {
+  BlogPost.prototype.incrementViewCount = function () {
     return this.increment('view_count');
   };
 
-  BlogPost.prototype.incrementCodeExecutions = function() {
+  BlogPost.prototype.incrementCodeExecutions = function () {
     const stats = this.interaction_stats || { code_executions: 0, challenge_attempts: 0, challenge_successes: 0 };
     stats.code_executions = (stats.code_executions || 0) + 1;
     return this.update({ interaction_stats: stats });
   };
 
-  BlogPost.prototype.incrementChallengeAttempts = function() {
+  BlogPost.prototype.incrementChallengeAttempts = function () {
     const stats = this.interaction_stats || { code_executions: 0, challenge_attempts: 0, challenge_successes: 0 };
     stats.challenge_attempts = (stats.challenge_attempts || 0) + 1;
     return this.update({ interaction_stats: stats });
   };
 
-  BlogPost.prototype.incrementChallengeSuccesses = function() {
+  BlogPost.prototype.incrementChallengeSuccesses = function () {
     const stats = this.interaction_stats || { code_executions: 0, challenge_attempts: 0, challenge_successes: 0 };
     stats.challenge_successes = (stats.challenge_successes || 0) + 1;
     return this.update({ interaction_stats: stats });
   };
 
   // Class methods
-  BlogPost.findPublished = function(options = {}) {
+  BlogPost.findPublished = function (options = {}) {
     return this.findAll({
       where: {
         status: 'published',
@@ -139,7 +139,7 @@ module.exports = (sequelize, DataTypes) => {
     });
   };
 
-  BlogPost.findBySlug = function(slug) {
+  BlogPost.findBySlug = function (slug) {
     return this.findOne({
       where: {
         slug,
@@ -148,7 +148,7 @@ module.exports = (sequelize, DataTypes) => {
     });
   };
 
-  BlogPost.findByTag = function(tag, options = {}) {
+  BlogPost.findByTag = function (tag, options = {}) {
     return this.findAll({
       where: {
         status: 'published',
@@ -160,6 +160,12 @@ module.exports = (sequelize, DataTypes) => {
       order: [['published_at', 'DESC']],
       ...options
     });
+  };
+
+  BlogPost.associate = (models) => {
+    if (models.Comment) {
+      BlogPost.hasMany(models.Comment, { foreignKey: 'post_id', as: 'comments' });
+    }
   };
 
   return BlogPost;

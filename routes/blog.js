@@ -4,33 +4,33 @@ const jwt = require('jsonwebtoken');
 
 // Admin authentication middleware
 const authenticateAdmin = (req, res, next) => {
-    const token = req.headers.authorization?.split(' ')[1]; // Bearer TOKEN
-    
-    if (!token) {
-        return res.status(401).json({
-            success: false,
-            error: 'Access token required'
-        });
+  const token = req.headers.authorization?.split(' ')[1]; // Bearer TOKEN
+
+  if (!token) {
+    return res.status(401).json({
+      success: false,
+      error: 'Access token required'
+    });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'asdfsafsafsafsafsafsafsafd');
+
+    if (decoded.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        error: 'Admin access required'
+      });
     }
 
-    try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'asdfsafsafsafsafsafsafsafd');
-        
-        if (decoded.role !== 'admin') {
-            return res.status(403).json({
-                success: false,
-                error: 'Admin access required'
-            });
-        }
-
-        req.user = decoded;
-        next();
-    } catch (error) {
-        return res.status(401).json({
-            success: false,
-            error: 'Invalid or expired token'
-        });
-    }
+    req.user = decoded;
+    next();
+  } catch (error) {
+    return res.status(401).json({
+      success: false,
+      error: 'Invalid or expired token'
+    });
+  }
 };
 
 // Get database models
@@ -41,14 +41,14 @@ router.use((req, res, next) => {
   if (!BlogPost && req.app.db && req.app.db.models) {
     BlogPost = req.app.db.models.BlogPost;
   }
-  
+
   if (!BlogPost) {
     return res.status(500).json({
       success: false,
       error: 'Database not initialized'
     });
   }
-  
+
   next();
 });
 
@@ -57,25 +57,25 @@ router.get('/posts', async (req, res) => {
   try {
     const { page = 1, limit = 10, tag, year, month } = req.query;
     const offset = (page - 1) * limit;
-    
+
     let whereClause = {
       status: 'published'
     };
-    
+
     // Filter by tag if provided
     if (tag) {
       whereClause.tags = {
         [BlogPost.sequelize.Sequelize.Op.contains]: [tag]
       };
     }
-    
+
     // Filter by year/month for timeline navigation
     if (year) {
       const startDate = new Date(year, month ? month - 1 : 0, 1);
-      const endDate = month 
-        ? new Date(year, month, 0, 23, 59, 59) 
+      const endDate = month
+        ? new Date(year, month, 0, 23, 59, 59)
         : new Date(year, 11, 31, 23, 59, 59);
-      
+
       whereClause.published_at = {
         [BlogPost.sequelize.Sequelize.Op.between]: [startDate, endDate]
       };
@@ -114,7 +114,7 @@ router.get('/posts', async (req, res) => {
 router.get('/posts/:slug', async (req, res) => {
   try {
     const post = await BlogPost.findBySlug(req.params.slug);
-    
+
     if (!post) {
       return res.status(404).json({
         success: false,
@@ -142,7 +142,7 @@ router.get('/posts/:slug', async (req, res) => {
 router.post('/challenge/validate', async (req, res) => {
   try {
     const { postId, answer } = req.body;
-    
+
     const post = await BlogPost.findByPk(postId);
     if (!post || !post.challenge) {
       return res.status(404).json({
@@ -155,7 +155,7 @@ router.post('/challenge/validate', async (req, res) => {
     await post.incrementChallengeAttempts();
 
     const isCorrect = answer.toLowerCase().trim() === post.challenge.answer.toLowerCase().trim();
-    
+
     if (isCorrect) {
       // Increment success count
       await post.incrementChallengeSuccesses();
@@ -181,7 +181,7 @@ router.post('/challenge/validate', async (req, res) => {
 router.post('/code-execution', async (req, res) => {
   try {
     const { postId, code, language } = req.body;
-    
+
     // Increment code execution count
     if (postId) {
       const post = await BlogPost.findByPk(postId);
@@ -263,14 +263,14 @@ router.get('/timeline', async (req, res) => {
       const date = new Date(post.published_at);
       const year = date.getFullYear();
       const month = date.getMonth();
-      
+
       if (!timeline[year]) {
         timeline[year] = {};
       }
       if (!timeline[year][month]) {
         timeline[year][month] = [];
       }
-      
+
       timeline[year][month].push({
         id: post.id,
         title: post.title,
@@ -394,8 +394,8 @@ router.put('/posts/:id', authenticateAdmin, async (req, res) => {
         .trim('-');
 
       // Check if new slug already exists
-      const existingPost = await BlogPost.findOne({ 
-        where: { 
+      const existingPost = await BlogPost.findOne({
+        where: {
           slug,
           id: { [BlogPost.sequelize.Sequelize.Op.ne]: postId }
         }
@@ -439,7 +439,7 @@ router.put('/posts/:id', authenticateAdmin, async (req, res) => {
 router.delete('/posts/:id', authenticateAdmin, async (req, res) => {
   try {
     const postId = req.params.id;
-    
+
     const post = await BlogPost.findByPk(postId);
     if (!post) {
       return res.status(404).json({
@@ -467,7 +467,7 @@ router.delete('/posts/:id', authenticateAdmin, async (req, res) => {
 router.get('/posts/:id/edit', authenticateAdmin, async (req, res) => {
   try {
     const postId = req.params.id;
-    
+
     const post = await BlogPost.findByPk(postId);
     if (!post) {
       return res.status(404).json({
@@ -519,6 +519,150 @@ router.get('/drafts', authenticateAdmin, async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to fetch draft posts'
+    });
+  }
+});
+
+// User authentication middleware
+const authenticateUser = (req, res, next) => {
+  const token = req.headers.authorization?.split(' ')[1]; // Bearer TOKEN
+
+  if (!token) {
+    return res.status(401).json({
+      success: false,
+      error: 'Access token required'
+    });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'asdfsafsafsafsafsafsafsafd');
+    req.user = decoded;
+    next();
+  } catch (error) {
+    return res.status(401).json({
+      success: false,
+      error: 'Invalid or expired token'
+    });
+  }
+};
+
+// GET /api/blog/posts/:id/comments - Get comments for a post
+router.get('/posts/:id/comments', async (req, res) => {
+  try {
+    const postId = req.params.id;
+    const Comment = req.app.db.models.Comment;
+    const Users = req.app.db.models.Users;
+
+    if (!Comment) {
+      return res.status(500).json({
+        success: false,
+        error: 'Comment model not initialized'
+      });
+    }
+
+    const comments = await Comment.findAll({
+      where: { post_id: postId },
+      include: [{
+        model: Users,
+        as: 'user',
+        attributes: ['id', 'name', 'role']
+      }],
+      order: [['created_at', 'DESC']]
+    });
+
+    res.json({
+      success: true,
+      data: comments
+    });
+  } catch (error) {
+    console.error('Comments fetch error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch comments'
+    });
+  }
+});
+
+// POST /api/blog/posts/:id/comments - Create a comment
+router.post('/posts/:id/comments', authenticateUser, async (req, res) => {
+  try {
+    const postId = req.params.id;
+    const { content } = req.body;
+    const userId = req.user.id;
+    const Comment = req.app.db.models.Comment;
+
+    if (!content) {
+      return res.status(400).json({
+        success: false,
+        error: 'Comment content is required'
+      });
+    }
+
+    const comment = await Comment.create({
+      content,
+      post_id: postId,
+      user_id: userId
+    });
+
+    // Fetch the created comment with user info
+    const Users = req.app.db.models.Users;
+    const createdComment = await Comment.findByPk(comment.id, {
+      include: [{
+        model: Users,
+        as: 'user',
+        attributes: ['id', 'name', 'role']
+      }]
+    });
+
+    res.status(201).json({
+      success: true,
+      data: createdComment
+    });
+  } catch (error) {
+    console.error('Comment creation error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to create comment'
+    });
+  }
+});
+
+// DELETE /api/blog/comments/:id - Delete a comment
+router.delete('/comments/:id', authenticateUser, async (req, res) => {
+  try {
+    const commentId = req.params.id;
+    const userId = req.user.id;
+    const userRole = req.user.role;
+    const Comment = req.app.db.models.Comment;
+
+    const comment = await Comment.findByPk(commentId);
+
+    if (!comment) {
+      return res.status(404).json({
+        success: false,
+        error: 'Comment not found'
+      });
+    }
+
+    // Check if user is owner or admin
+    if (comment.user_id !== userId && userRole !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        error: 'Not authorized to delete this comment'
+      });
+    }
+
+    await comment.destroy();
+
+    res.json({
+      success: true,
+      message: 'Comment deleted successfully'
+    });
+  } catch (error) {
+    console.error('Comment deletion error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete comment'
     });
   }
 });

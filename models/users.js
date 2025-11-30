@@ -3,9 +3,9 @@
  */
 //import bcrypt from "bcrypt"
 const bcrypt = require('bcrypt');
-module.exports = (sequelize,DataType)=>{
+module.exports = (sequelize, DataType) => {
     'use strick'
-    const Users = sequelize.define('Users',{
+    const Users = sequelize.define('Users', {
         id: {
             type: DataType.INTEGER,
             primaryKey: true,
@@ -38,9 +38,9 @@ module.exports = (sequelize,DataType)=>{
             allowNull: false,
             defaultValue: 'user'
         }
-        
-    },{
-        hooks:{
+
+    }, {
+        hooks: {
             beforeCreate: user => {
                 const salt = bcrypt.genSaltSync();
                 user.password = bcrypt.hashSync(user.password, salt);
@@ -50,6 +50,9 @@ module.exports = (sequelize,DataType)=>{
 
     Users.associate = (models) => {
         Users.hasMany(models.Tasks);
+        if (models.Comment) {
+            Users.hasMany(models.Comment, { foreignKey: 'user_id', as: 'comments' });
+        }
     };
     Users.isPassword = (encodedPassword, password) => {
         //比较原密码与库里存的hash密码是否相等
