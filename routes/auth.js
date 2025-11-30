@@ -140,7 +140,7 @@ router.post('/register', async (req, res) => {
     // Check if user already exists
     const existingUser = await Users.findOne({
       where: {
-        [Users.sequelize.Op.or]: [
+        [Sequelize.Op.or]: [
           { name },
           { email }
         ]
@@ -199,7 +199,7 @@ router.post('/register', async (req, res) => {
 router.get('/me', (req, res) => {
   try {
     const token = req.headers.authorization?.split(' ')[1]; // Bearer TOKEN
-    
+
     if (!token) {
       return res.status(401).json({
         success: false,
@@ -208,7 +208,7 @@ router.get('/me', (req, res) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'asdfsafsafsafsafsafsafsafd');
-    
+
     res.json({
       success: true,
       data: {
